@@ -54,7 +54,6 @@ int parse_command(char *line, char *arguments[]) {
 int main(int argc, char *argv[]) {
         while (1) {
                 char cmdLine[MAXLEN] = "";
-                char* cmd;
 
                 printf("%d> ", getpid());
 
@@ -67,7 +66,7 @@ int main(int argc, char *argv[]) {
                 int numPipes = count_pipes(cmdLine);
                 int i = 0;
 
-                for (cmd = strtok(cmdLine, "|\n"); cmd && *cmd; cmd = strtok(NULL, "|\n"), i++) {
+                for (char* cmd = strtok(cmdLine, "|\n"); cmd && *cmd; cmd = strtok(NULL, "|\n"), i++) {
                         // create pipe
                         if (i < numPipes && pipe(fds[i]) == -1) {
                                 fprintf(stderr, "pipe failed.\n");
@@ -75,6 +74,7 @@ int main(int argc, char *argv[]) {
                         }
 
                         pid_t pid = fork();
+
                         if (pid == 0) {
                                 char *args[MAXLEN];
                                 parse_command(cmd, args);
@@ -90,8 +90,9 @@ int main(int argc, char *argv[]) {
                                 }
                                 // dup2 redirects read end of pipe to stdin
                                 if (i > 0) {
-                                        //close(0);
-                                        dup2(fds[i-1][0], 0);
+                                        if (dup2(fds[i-1][0], 0) < 0){
+                                                puts("can't dup pipe read");
+                                        }
                                         close(fds[i-1][0]); // close 1
                                         close(fds[i-1][1]); // close 0
                                 }
@@ -110,11 +111,13 @@ int main(int argc, char *argv[]) {
                                 close(fds[i][1]);
                                 return 1;
                         }
-                        close(fds[i][1]);
+                        if (i < numPipes){
+                                close(fds[i][1]);
+                        }
                         if (i > 0) {
                                 close(fds[i-1][0]);
-                                close(fds[i-1][1]);
                         }
+
                         wait(NULL);
                 }
                 wait(NULL);
