@@ -16,7 +16,6 @@ int top = -1;
 char* stack[MAXLEN];
 
 /* Function: count_pipes
- * Author: David Allen
  * Params:
  * -char* line, the full string
  * Returns: int number of pipes (|)
@@ -35,7 +34,6 @@ int count_pipes(char* line) {
 }
 
 /* Function: parse_command
- * Author: David Allen
  * Params:
  * -char* line, the full command string;
  * -char* arguments[], an string array to store arguments;
