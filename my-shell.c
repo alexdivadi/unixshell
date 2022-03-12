@@ -53,8 +53,12 @@ int parse_command(char *line, char *arguments[]) {
 }
 
 
-
-// Same function from assignment 1 to check for "exit", "quit", and "cd"
+/* Function: checkSpecial
+ * Params:
+ * -char* line, the full string
+ * Returns: int success (returns -1 if fail)
+ * Purpose: Same function from assignment 1 to check for "exit", "quit", and "cd"
+ */
 int checkSpecial(char* lineIn[]) {
     if (strcmp(lineIn[0], "cd") == 0 && lineIn[1] != NULL) {
         if (chdir(lineIn[1]) != 0) {
