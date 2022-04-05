@@ -1,20 +1,36 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <pthread.h>
 
 // Data: contains data necessary to compute dot product
 struct Data {
-  int* v1;
-  int* v2;
-  int n;
-  int size;
-  int* position;
+int* v1;
+int* v2;
+int n;
+int size;
+int* position;
 };
 
 // global variables needed by threads
 struct Data* d;
 int num_elements, thread_count;
+
+/* Is Number
+ * Args: char array s[]
+ * Returns: true if array only contains digits, false else
+ * */
+bool isNumber(char s[])
+{
+    for (int i = 0; s[i]; i++) {
+        if (!isdigit(s[i]))
+            return false;
+    }
+    return true;
+}
+
 
 /* Dot Product
  * Args: struct Data d
@@ -32,10 +48,10 @@ void dot_product(struct Data d)
         *(d.position) = val;
 }
 
-/* Calcuulate Output
+/* Calculate Output
  * Args: int index
  * Returns: N/A
- * Function: runs the dot-product function for depending on number of threads
+ * Function: runs the dot-product function appropriate number of times depending on number of threads
  * */
 void *calc_output(void *ptr) {
         int *index = (int *) ptr;
@@ -60,31 +76,35 @@ int main(int argc, char *argv[])
         FILE *input1, *input2, *output;
         int *matrix1, *matrix2, *matrix_output;
 
-        //printf("Step 1: Memory Allocation\n");
+        // Input error handling for robustness
+        printf("Step 1: Memory Allocation\n");
 
-        /* do all input error checking */
+        if (!isNumber(argv[1]) || !isNumber(argv[2]) || !isNumber(argv[3]) || !isNumber(argv[7])) {
+            fprintf(stderr, "Error: matrix dimensions must all be numbers, and thread count must be a number\nUsage: ./matmult u v w input1.txt input2.txt output.txt thread_count\n");
+            exit(1);
+        }
         if ((u = atoi(argv[1])) < 0) {
-            fprintf(stderr, "Error: Invalid argument (1)\n");
+            fprintf(stderr, "Error: Invalid argument (1)\nUsage: ./matmult u v w input1.txt input2.txt output.txt thread_count\n");
             exit(1);
         }
         if ((v = atoi(argv[2])) < 0) {
-            fprintf(stderr, "Error: Invalid argument (2)\n");
+            fprintf(stderr, "Error: Invalid argument (2)\nUsage: ./matmult u v w input1.txt input2.txt output.txt thread_count\n");
             exit(1);
         }
         if ((w = atoi(argv[3])) < 0) {
-            fprintf(stderr, "Error: Invalid argument (3)\n");
+            fprintf(stderr, "Error: Invalid argument (3)\nUsage: ./matmult u v w input1.txt input2.txt output.txt thread_count\n");
             exit(1);
         }
         if ((thread_count = atoi(argv[7])) < 0) {
-            fprintf(stderr, "Error: Invalid argument (7)\n");
+            fprintf(stderr, "Error: Invalid argument (7)\nUsage: ./matmult u v w input1.txt input2.txt output.txt thread_count\n");
             exit(1);
         }
         if (thread_count > u * w || thread_count < 1) {
-            fprintf(stderr, "Error: Thread count is incorrect.\n");
+            fprintf(stderr, "Error: Thread count is incorrect.\nUsage: ./matmult u v w input1.txt input2.txt output.txt thread_count\n");
             exit(1);
         }
         if (u < 1 || v < 1 || w < 1) {
-            fprintf(stderr, "Error: Must input non-negative numbers.");
+            fprintf(stderr, "Error: Must input non-negative numbers.\nUsage: ./matmult u v w input1.txt input2.txt output.txt thread_count\n");
             exit(1);
         }
         /* update values */
@@ -94,7 +114,7 @@ int main(int argc, char *argv[])
         matrix2 = (int*)malloc(v * w * sizeof(int));
         matrix_output = (int*)malloc(u * w * sizeof(int));
 
-        //printf("Step 2: Read input files\n");
+        printf("Step 2: Read files\n");
 
         input1 = fopen(argv[4], "r");
         if (!input1) {
@@ -122,7 +142,7 @@ int main(int argc, char *argv[])
         }
         fclose(input2);
 
-        //printf("Step 3: Create Threads\n");
+        //Step 3: Create Threads
 
         /* allocate dynamic memory using new data */
         d = (struct Data *)malloc(u * w * sizeof(struct Data));
@@ -133,34 +153,29 @@ int main(int argc, char *argv[])
         /* populate values for Data */
         for (int row = 0; row < u; row++) {
                 for (int col = 0; col < w; col++) {
-                        int index = row * w + col; // index of output matrix
-                        d[index].v1 = &matrix1[row*v]; // pointer to row in matrix 1
-                        d[index].v2 = &matrix2[col]; // pointer to column in matrix 2
-                        d[index].n = v; // number of elements in row/column
-                        d[index].size = w; // number of columns in result matrix (used for calculating index)
-                        d[index].position = &matrix_output[index]; // location in memory of output matrix cell
+                        int index = row * w + col;
+                        d[index].v1 = &matrix1[row*v];
+                        d[index].v2 = &matrix2[col];
+                        d[index].n = v;
+                        d[index].size = w;
+                        d[index].position = &matrix_output[index];
                 }
         }
 
         /* create threads */
         for (int i = 0; i < thread_count; i++) {
                 thread_index[i] = i;
-                if (pthread_create( &threads[i], NULL, calc_output, (void *)&thread_index[i]) < 0) {
-                        printf("Error creating thread (%d)\n", i);
-                        exit(1);
-                }
+                pthread_create( &threads[i], NULL, calc_output, (void *)&thread_index[i]);
         }
 
-       //printf("Step 4: Join Threads\n");
-
-        /* join threads */
+       //Step 4: Join Threads
         for (int i = 0; i < thread_count; i++) {
                 int err = 0;
                 if ((err = pthread_join(threads[i], NULL)) < 0)
                         printf("Pthread_join failed (%d)\n", err);
         }
 
-        //printf("Step 5: Write Output\n");
+        //Step 5: Write Output
 
         output = fopen(argv[6], "w");
         if (!output) {
